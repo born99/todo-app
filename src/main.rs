@@ -1,16 +1,11 @@
 mod background;
+mod commands;
 mod database;
 mod models;
 mod tray;
-mod ui;
 
 fn main() {
     println!("Personal Productivity App - Core Initialized");
-
-    #[cfg(target_os = "linux")]
-    if let Err(e) = gtk::init() {
-        eprintln!("Failed to run gtk::init: {}", e);
-    }
 
     // Verify DB layout
     let db = database::Database::new("tasks.db");
@@ -20,13 +15,68 @@ fn main() {
         println!("Database schema initialized successfully.");
     }
 
-    // Start daemon threads
+    // Start background notification daemon
     background::start_notification_daemon("tasks.db".to_string());
-    let _tray_icon = tray::start_tray_daemon().expect("Failed to initialize system tray");
 
-    println!("Running in background. Check System Tray or wait for notifications.");
+    println!("Running in background. Starting Tauri window...");
 
-    if let Err(e) = ui::launch_ui() {
-        eprintln!("UI failed to launch: {}", e);
-    }
+    tauri::Builder::default()
+        .setup(|app| {
+            use tauri::menu::{Menu, MenuItem};
+            use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+            use tauri::Manager;
+
+            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+
+            let tray = TrayIconBuilder::new()
+                .menu(&menu)
+                .tooltip("Rust Productivity App")
+                .icon(app.default_window_icon().unwrap().clone())
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "quit" => {
+                        std::process::exit(0);
+                    }
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            window.show().unwrap();
+                            window.set_focus().unwrap();
+                        }
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            window.show().unwrap();
+                            window.set_focus().unwrap();
+                        }
+                    }
+                })
+                .build(app)?;
+
+            Ok(())
+        })
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                window.hide().unwrap();
+                api.prevent_close();
+            }
+            _ => {}
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::get_tasks,
+            commands::create_task,
+            commands::complete_task,
+            commands::delete_task,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
 }

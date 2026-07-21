@@ -12,7 +12,9 @@ impl Database {
     }
 
     pub fn get_connection(&self) -> Result<Connection> {
-        Connection::open(&self.db_path)
+        let conn = Connection::open(&self.db_path)?;
+        conn.busy_timeout(std::time::Duration::from_secs(5))?;
+        Ok(conn)
     }
 
     pub fn initialize_schema(&self) -> Result<()> {
