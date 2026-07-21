@@ -1,6 +1,9 @@
-use tray_icon::{TrayIconBuilder, TrayIcon, menu::{Menu, MenuItem, MenuEvent}, Icon};
 use std::thread;
 use std::time::Duration;
+use tray_icon::{
+    Icon, TrayIcon, TrayIconBuilder,
+    menu::{Menu, MenuEvent, MenuItem},
+};
 
 fn generate_icon() -> Icon {
     Icon::from_rgba(vec![255, 0, 0, 255], 1, 1).unwrap()
@@ -22,10 +25,11 @@ pub fn start_tray_daemon() -> Result<TrayIcon, Box<dyn std::error::Error>> {
 
     thread::spawn(move || {
         loop {
-            if let Ok(event) = MenuEvent::receiver().try_recv() {
-                if event.id == quit_id {
-                    std::process::exit(0);
-                }
+            if MenuEvent::receiver()
+                .try_recv()
+                .is_ok_and(|e| e.id == quit_id)
+            {
+                std::process::exit(0);
             }
             thread::sleep(Duration::from_millis(50));
         }
