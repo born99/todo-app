@@ -45,6 +45,7 @@ pub struct Task {
     pub duration_minutes: Option<i32>,
     pub due_date: Option<DateTime<Utc>>,
     pub is_completed: bool,
+    pub is_notified: bool,
     pub recurring_rule: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
