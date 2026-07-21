@@ -10,6 +10,7 @@ pub fn launch_ui() -> iced::Result {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Tab {
     Tasks,
+    Calendar,
     Analytics,
 }
 
@@ -81,6 +82,9 @@ pub fn view(state: &ProductivityApp) -> Element<'_, Message> {
         button(text("Tasks").size(20))
             .padding(10)
             .on_press(Message::SwitchTab(Tab::Tasks)),
+        button(text("Calendar").size(20))
+            .padding(10)
+            .on_press(Message::SwitchTab(Tab::Calendar)),
         button(text("Analytics").size(20))
             .padding(10)
             .on_press(Message::SwitchTab(Tab::Analytics)),
@@ -120,6 +124,41 @@ pub fn view(state: &ProductivityApp) -> Element<'_, Message> {
             column![title, form_row, scrollable(tasks_column)]
                 .spacing(30)
                 .into()
+        }
+        Tab::Calendar => {
+            let title = text("Calendar / Agenda").size(40);
+            let upcoming_col = state
+                .tasks
+                .iter()
+                .filter(|t| !t.is_completed && t.due_date.is_some())
+                .fold(column![].spacing(10), |col, task| {
+                    col.push(
+                        text(format!(
+                            "{} - Due: {}",
+                            task.title,
+                            task.due_date.unwrap().format("%Y-%m-%d %H:%M")
+                        ))
+                        .size(20),
+                    )
+                });
+
+            let no_date_col = state
+                .tasks
+                .iter()
+                .filter(|t| !t.is_completed && t.due_date.is_none())
+                .fold(column![].spacing(10), |col, task| {
+                    col.push(text(task.title.to_string()).size(20))
+                });
+
+            column![
+                title,
+                text("Scheduled Tasks").size(24),
+                scrollable(upcoming_col),
+                text("Unscheduled Tasks").size(24),
+                scrollable(no_date_col)
+            ]
+            .spacing(20)
+            .into()
         }
         Tab::Analytics => {
             let title = text("Productivity Analytics").size(40);
