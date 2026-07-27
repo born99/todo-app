@@ -55,7 +55,7 @@ fn main() {
                     {
                         let app = tray.app_handle();
                         if let Some(window) = app.get_webview_window("main") {
-                            window.show().unwrap();
+                            window.show().unwrap(); 
                             window.set_focus().unwrap();
                         }
                     }
@@ -65,7 +65,7 @@ fn main() {
             Ok(())
         })
         .on_window_event(|window, event| match event {
-            tauri::WindowEvent::CloseRequested { api, .. } => {
+            tauri::WindowEvent::CloseRequested { api, .. } => {                     
                 window.hide().unwrap();
                 api.prevent_close();
             }

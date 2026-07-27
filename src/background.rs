@@ -9,7 +9,10 @@ pub fn start_notification_daemon(db_path: String) {
         loop {
             if let Ok(overdue_tasks) = db.fetch_unnotified_overdue_tasks() {
                 for task in overdue_tasks {
-                    let body = task.description.clone().unwrap_or_else(|| "Task Reminder".to_string());
+                    let body = task
+                        .description
+                        .clone()
+                        .unwrap_or_else(|| "Task Reminder".to_string());
                     if let Err(e) = Notification::new()
                         .summary(&format!("Overdue: {}", task.title))
                         .body(&body)
