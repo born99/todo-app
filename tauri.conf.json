@@ -16,8 +16,7 @@
     "withGlobalTauri": true
   },
   "bundle": {
-    "active": true,
-    "targets": "all",
+    "active": false,
     "icon": [
       "icons/icon.ico"
     ]

@@ -15,13 +15,17 @@ jobs:
       - name: Setup Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Tauri App & Draft Release
-        uses: tauri-apps/tauri-action@v0
+      - name: Build Raw Executable (.exe)
+        run: cargo build --release
+
+      - name: Draft Release & Upload .exe
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: 'v__VERSION__' # The action automatically replaces __VERSION__ with the version from tauri.conf.json
-          releaseName: 'Rust Productivity App v__VERSION__'
-          releaseBody: 'Automated Windows build. See the assets below to download and install.'
-          releaseDraft: true
+          tag_name: "v0.1.0-alpha"
+          name: 'Rust Productivity App (Standalone)'
+          body: 'Automated Windows build. Download the .exe below to run the app instantly without installation.'
+          draft: true
           prerelease: false
+          files: target/release/rust-productivity-app.exe
