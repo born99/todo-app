@@ -18,6 +18,9 @@ jobs:
       - name: Setup Rust stable
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: Build Raw Executable (.exe)
         run: cargo build --release
 

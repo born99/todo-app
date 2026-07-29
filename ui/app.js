@@ -1,5 +1,4 @@
 const { invoke } = window.__TAURI__.core;
-const { listen } = window.__TAURI__.event;
 
 let allTasks = [];
 let selectedPriority = 'medium';
@@ -7,41 +6,8 @@ let selectedPriority = 'medium';
 // ─── Bootstrap ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     loadTasks();
-    
-    // Listen for aggressive overdue alarms from Rust Backend
-    listen('task-overdue', (event) => {
-        const task = event.payload;
-        if (!document.body.classList.contains('shake-screen')) {
-            playAggressiveAlarm();
-            document.body.classList.add('shake-screen');
-            
-            // Open huge alert modal (freezes JS thread until user clicks OK)
-            alert(`🚨 TASK OVERDUE 🚨\n\n${task.title.toUpperCase()}\n${task.description || ''}`);
-            
-            setTimeout(() => document.body.classList.remove('shake-screen'), 3500);
-        }
-    });
 });
 
-function playAggressiveAlarm() {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    
-    osc.type = 'square';
-    // Rapidly alternate frequency for intense alarm effect
-    let freq = 800;
-    for (let i = 0; i < 15; i++) {
-        freq = freq === 800 ? 1100 : 800;
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + (i * 0.2));
-    }
-    
-    gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
-    osc.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    osc.start();
-    setTimeout(() => { osc.stop(); ctx.close(); }, 3000);
-}
 
 // ─── Tab Switching ──────────────────────────────────────────────
 function switchTab(tabName, btn) {
@@ -208,12 +174,12 @@ function selectPriority(btn) {
 function setDueDate(option) {
     const dInput = document.getElementById('f-due-date');
     const tInput = document.getElementById('f-due-time');
-    if (!option) { 
-        dInput.value = ''; 
-        tInput.value = ''; 
-        return; 
+    if (!option) {
+        dInput.value = '';
+        tInput.value = '';
+        return;
     }
-    
+
     const now = new Date();
     if (option === 'today') {
         // Leave date as today
@@ -222,10 +188,10 @@ function setDueDate(option) {
     } else if (option === 'week') {
         now.setDate(now.getDate() + 7);
     }
-    
+
     const pad = n => String(n).padStart(2, '0');
     dInput.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-    
+
     if (option === 'today') {
         tInput.value = `${pad((now.getHours() + 1) % 24)}:00`;
     } else {
@@ -241,7 +207,7 @@ async function handleSubmit(event) {
     const desc = document.getElementById('f-desc').value.trim() || null;
     const durVal = document.getElementById('f-duration').value.trim();
     const duration_minutes = durVal ? parseInt(durVal) : null;
-    
+
     const dVal = document.getElementById('f-due-date').value;
     const tVal = document.getElementById('f-due-time').value;
     let due_date = null;

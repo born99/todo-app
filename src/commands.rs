@@ -59,3 +59,11 @@ pub fn delete_task(id: i64) -> Result<(), String> {
         .map(|_| ())
         .map_err(|e| e.to_string())
 }
+
+#[tauri::command]
+pub fn close_alert(app: tauri::AppHandle) {
+    use tauri::Manager;
+    if let Some(window) = app.get_webview_window("alert") {
+        let _ = window.close();
+    }
+}
