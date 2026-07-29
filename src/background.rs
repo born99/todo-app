@@ -16,7 +16,7 @@ pub fn start_notification_daemon(db: Arc<Database>, app: AppHandle) {
                         if let Ok(mut lock) = crate::commands::get_alert_task_state().lock() {
                             *lock = Some(task.clone());
                         }
-                        if let Ok(alert_win) = WebviewWindowBuilder::new(
+                        match WebviewWindowBuilder::new(
                             &app,
                             "alert",
                             WebviewUrl::App("alert.html".into()),
@@ -29,7 +29,12 @@ pub fn start_notification_daemon(db: Arc<Database>, app: AppHandle) {
                         .decorations(false)
                         .build()
                         {
-                            let _ = alert_win.set_focus();
+                            Ok(alert_win) => {
+                                let _ = alert_win.set_focus();
+                            }
+                            Err(e) => {
+                                eprintln!("Failed to create alert window: {:?}", e);
+                            }
                         }
                     }
                     let _ = db.mark_task_notified(task.id);

@@ -192,10 +192,13 @@ impl Database {
         let now = Utc::now();
         for task in task_iter {
             let t = task.map_err(|e| e.to_string())?;
+            println!("Checking task: {:?}", t.title);
             if let Some(due) = t.due_date {
                 let early = t.alert_early_minutes.unwrap_or(0);
                 let trigger_time = due - chrono::Duration::minutes(early as i64);
+                println!("Trigger time: {:?}, Now: {:?}", trigger_time, now);
                 if trigger_time <= now {
+                    println!("Task {} is overdue!", t.id);
                     tasks.push(t);
                 }
             }
