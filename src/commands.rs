@@ -2,6 +2,13 @@ use crate::database::Database;
 use crate::models::{Priority, Task};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use std::sync::{Mutex, OnceLock};
+
+pub static ALERT_TASK: OnceLock<Mutex<Option<Task>>> = OnceLock::new();
+
+pub fn get_alert_task_state() -> &'static Mutex<Option<Task>> {
+    ALERT_TASK.get_or_init(|| Mutex::new(None))
+}
 
 fn get_db() -> Database {
     Database::new("tasks.db")
@@ -91,4 +98,9 @@ pub fn close_alert(app: tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("alert") {
         let _ = window.close();
     }
+}
+
+#[tauri::command]
+pub fn get_alert_task() -> Option<Task> {
+    get_alert_task_state().lock().unwrap().clone()
 }

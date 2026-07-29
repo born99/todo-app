@@ -13,21 +13,25 @@ pub fn start_notification_daemon(db_path: String, app: AppHandle) {
                     if let Some(existing) = app.get_webview_window("alert") {
                         let _ = existing.emit("set-task", &task);
                         let _ = existing.set_focus();
-                    } else if let Ok(alert_win) = WebviewWindowBuilder::new(
-                        &app,
-                        "alert",
-                        WebviewUrl::App("alert.html".into()),
-                    )
-                    .title("Overdue Alarm")
-                    .transparent(true)
-                    .fullscreen(true)
-                    .always_on_top(true)
-                    .skip_taskbar(true)
-                    .decorations(false)
-                    .build()
-                    {
-                        let _ = alert_win.emit("set-task", &task);
-                        let _ = alert_win.set_focus();
+                    } else {
+                        // Assign task globally to RAM payload buffer prior to window spawning
+                        *crate::commands::get_alert_task_state().lock().unwrap() =
+                            Some(task.clone());
+                        if let Ok(alert_win) = WebviewWindowBuilder::new(
+                            &app,
+                            "alert",
+                            WebviewUrl::App("alert.html".into()),
+                        )
+                        .title("Overdue Alarm")
+                        .transparent(true)
+                        .fullscreen(true)
+                        .always_on_top(true)
+                        .skip_taskbar(true)
+                        .decorations(false)
+                        .build()
+                        {
+                            let _ = alert_win.set_focus();
+                        }
                     }
 
                     let _ = db.mark_task_notified(task.id);

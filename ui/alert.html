@@ -2,6 +2,7 @@
 <html>
 
 <head>
+    <meta charset="UTF-8">
     <style>
         body {
             margin: 0;
@@ -191,17 +192,16 @@
 
         // Update real time clock dynamically
         const updateTime = () => {
-            document.getElementById('time-now').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('time-now').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         };
         updateTime();
-        setInterval(updateTime, 60000);
+        setInterval(updateTime, 1000);
 
-        // Hydrate DOM with native Rust data payload
-        listen('set-task', (event) => {
-            const task = event.payload;
+        // Function to hydrate UI explicitly
+        const hydrateUI = (task) => {
+            if (!task) return;
             document.getElementById('title').textContent = task.title;
             document.getElementById('desc').textContent = task.description || 'No description provided.';
-
             document.getElementById('priority').textContent = task.priority;
             document.getElementById('duration').textContent = task.duration_minutes ? `${task.duration_minutes} mins` : 'Flexible';
 
@@ -213,7 +213,13 @@
                 document.getElementById('date').textContent = 'Flexible';
                 document.getElementById('schedule-time').textContent = 'Anytime';
             }
-        });
+        };
+
+        // Hydrate upon initial loading
+        invoke('get_alert_task').then(task => hydrateUI(task)).catch(console.error);
+
+        // Hydrate sequentially if already open
+        listen('set-task', (event) => hydrateUI(event.payload));
 
         const forceClose = async () => {
             if (ctx) { ctx.close(); }
