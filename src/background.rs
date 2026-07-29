@@ -9,12 +9,11 @@ pub fn start_notification_daemon(db_path: String, app: AppHandle) {
         loop {
             if let Ok(overdue_tasks) = db.fetch_unnotified_overdue_tasks() {
                 for task in overdue_tasks {
-                    // Generate seamless fullscreen transparent overlay window natively
+                    // Safely reuse existing window or build new
                     if let Some(existing) = app.get_webview_window("alert") {
-                        let _ = existing.close();
-                    }
-
-                    if let Ok(alert_win) = WebviewWindowBuilder::new(
+                        let _ = existing.emit("set-task", &task);
+                        let _ = existing.set_focus();
+                    } else if let Ok(alert_win) = WebviewWindowBuilder::new(
                         &app,
                         "alert",
                         WebviewUrl::App("alert.html".into()),
@@ -27,7 +26,6 @@ pub fn start_notification_daemon(db_path: String, app: AppHandle) {
                     .decorations(false)
                     .build()
                     {
-                        // Bridge task data directly into the newly booted transparent HTML frame
                         let _ = alert_win.emit("set-task", &task);
                         let _ = alert_win.set_focus();
                     }

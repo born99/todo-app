@@ -19,7 +19,7 @@ impl Database {
 
     pub fn initialize_schema(&self) -> Result<()> {
         let conn = self.get_connection()?;
-        
+
         // Tasks Table
         conn.execute(
             "CREATE TABLE IF NOT EXISTS tasks (
@@ -38,7 +38,10 @@ impl Database {
             [],
         )?;
 
-        let _ = conn.execute("ALTER TABLE tasks ADD COLUMN is_notified BOOLEAN NOT NULL DEFAULT 0", []);
+        let _ = conn.execute(
+            "ALTER TABLE tasks ADD COLUMN is_notified BOOLEAN NOT NULL DEFAULT 0",
+            [],
+        );
 
         // Subtasks Table
         conn.execute(
@@ -101,11 +104,11 @@ impl Database {
     pub fn fetch_tasks(&self) -> rusqlite::Result<Vec<crate::models::Task>> {
         let conn = self.get_connection()?;
         let mut stmt = conn.prepare("SELECT id, title, description, priority, duration_minutes, due_date, is_completed, is_notified, recurring_rule, created_at, updated_at FROM tasks")?;
-        
+
         let task_iter = stmt.query_map([], |row| {
             let priority_str: String = row.get(3)?;
             let priority = priority_str.parse().unwrap_or_default();
-            
+
             Ok(crate::models::Task {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -139,14 +142,12 @@ impl Database {
 
     pub fn fetch_unnotified_overdue_tasks(&self) -> rusqlite::Result<Vec<crate::models::Task>> {
         let conn = self.get_connection()?;
-        let now_str = chrono::Utc::now().to_rfc3339();
-        
-        let mut stmt = conn.prepare("SELECT id, title, description, priority, duration_minutes, due_date, is_completed, is_notified, recurring_rule, created_at, updated_at FROM tasks WHERE is_completed = 0 AND is_notified = 0 AND due_date IS NOT NULL AND due_date <= ?1")?;
-        
-        let task_iter = stmt.query_map(rusqlite::params![now_str], |row| {
+        let mut stmt = conn.prepare("SELECT id, title, description, priority, duration_minutes, due_date, is_completed, is_notified, recurring_rule, created_at, updated_at FROM tasks WHERE is_completed = 0 AND is_notified = 0 AND due_date IS NOT NULL")?;
+
+        let task_iter = stmt.query_map([], |row| {
             let priority_str: String = row.get(3)?;
             let priority = priority_str.parse().unwrap_or_default();
-            
+
             Ok(crate::models::Task {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -163,8 +164,14 @@ impl Database {
         })?;
 
         let mut tasks = Vec::new();
+        let now = chrono::Utc::now();
         for task in task_iter {
-            tasks.push(task?);
+            let t = task?;
+            if let Some(due) = t.due_date {
+                if due <= now {
+                    tasks.push(t);
+                }
+            }
         }
         Ok(tasks)
     }
