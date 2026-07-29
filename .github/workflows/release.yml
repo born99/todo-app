@@ -1,0 +1,37 @@
+name: 'Release Windows App'
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build Raw Executable (.exe)
+        run: cargo build --release
+
+      - name: Draft Release & Upload .exe
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: "v0.1.0-alpha"
+          name: 'Rust Productivity App (Standalone)'
+          body: 'Automated Windows build. Download the .exe below to run the app instantly without installation.'
+          draft: true
+          prerelease: false
+          files: target/release/rust-productivity-app.exe

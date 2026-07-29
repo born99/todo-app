@@ -1,0 +1,24 @@
+{
+  "productName": "rust-productivity-app",
+  "version": "0.1.0",
+  "identifier": "com.productivity.app",
+  "build": {
+    "frontendDist": "./ui"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Productivity App",
+        "width": 1000,
+        "height": 700
+      }
+    ],
+    "withGlobalTauri": true
+  },
+  "bundle": {
+    "active": false,
+    "icon": [
+      "icons/icon.ico"
+    ]
+  }
+}

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            /* Soft elegant glassmorphism overlay */
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+            font-family: 'Inter', system-ui, sans-serif;
+            animation: fadeIn 0.4s ease-out forwards;
+            color: #fff;
+        }
+
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .card {
+            background: rgba(30, 30, 40, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: left;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            width: 450px;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            transform: translateY(40px);
+            opacity: 0;
+        }
+
+        @keyframes slideUp {
+            100% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+        }
+
+        .time-now {
+            font-size: 14px;
+            opacity: 0.6;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .icon {
+            font-size: 26px;
+        }
+
+        h2 {
+            font-size: 28px;
+            margin: 0 0 10px 0;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        p.desc {
+            font-size: 15px;
+            color: #b5b5c3;
+            margin: 0 0 35px 0;
+            line-height: 1.5;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8a8a9a;
+            margin-bottom: 6px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .hint {
+            text-align: center;
+            font-size: 13px;
+            opacity: 0.4;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="header-row">
+            <span class="icon">✨ Task Reminder</span>
+            <span class="time-now" id="time-now">--:--</span>
+        </div>
+        <h2 id="title">Loading...</h2>
+        <p class="desc" id="desc"></p>
+
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Scheduled Time</span>
+                <span class="info-value" id="schedule-time">--</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Duration</span>
+                <span class="info-value" id="duration">--</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Priority</span>
+                <span class="info-value" id="priority" style="text-transform: capitalize;">--</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Scheduled Date</span>
+                <span class="info-value" id="date">--</span>
+            </div>
+        </div>
+
+        <div class="hint">Click or press any key to dismiss</div>
+    </div>
+
+    <script>
+        const { listen } = window.__TAURI__.event;
+        const { invoke } = window.__TAURI__.core;
+
+        let ctx;
+        function playSoftChime() {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+            // A soft, elegant bell/chime using pure sine oscillators
+            const playTone = (freq, startTime, duration, vol) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(vol, startTime + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            };
+
+            const now = ctx.currentTime;
+            // Gentle Cmaj7 Arpeggio Bell Ring
+            playTone(523.25, now, 2, 0.4); // C5
+            playTone(659.25, now + 0.08, 2, 0.3); // E5
+            playTone(783.99, now + 0.16, 2.5, 0.25); // G5
+            playTone(987.77, now + 0.28, 3, 0.2); // B5
+        }
+
+        // Auto play aesthetic audio
+        playSoftChime();
+
+        // Update real time clock dynamically
+        const updateTime = () => {
+            document.getElementById('time-now').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        };
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        let countdownInterval = null;
+        // Function to hydrate UI explicitly
+        const hydrateUI = (task) => {
+            if (!task) return;
+            if (countdownInterval) clearInterval(countdownInterval);
+            document.getElementById('title').textContent = task.title;
+            document.getElementById('desc').textContent = task.description || 'No description provided.';
+            document.getElementById('priority').textContent = task.priority;
+            document.getElementById('duration').textContent = task.duration_minutes ? `${task.duration_minutes} mins` : 'Flexible';
+
+            if (task.due_date) {
+                const dObj = new Date(task.due_date);
+                document.getElementById('date').textContent = dObj.toLocaleDateString();
+
+                const baseTime = dObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const updateCountdown = () => {
+                    const now = new Date().getTime();
+                    const due = dObj.getTime();
+                    if (now < due) {
+                        const diff = Math.floor((due - now) / 1000);
+                        const mins = String(Math.floor(diff / 60)).padStart(2, '0');
+                        const secs = String(diff % 60).padStart(2, '0');
+                        document.getElementById('schedule-time').innerHTML = `${baseTime} <br/><span style="color:#ffeb3b; font-size:12px; font-weight:700;">Starts in ${mins}:${secs}</span>`;
+                    } else {
+                        document.getElementById('schedule-time').innerHTML = `${baseTime} <br/><span style="color:#ff5555; font-size:12px; font-weight:700;">OVERDUE NOW!</span>`;
+                        if (countdownInterval) clearInterval(countdownInterval);
+                    }
+                };
+
+                if (new Date().getTime() < dObj.getTime()) {
+                    updateCountdown();
+                    countdownInterval = setInterval(updateCountdown, 1000);
+                } else {
+                    document.getElementById('schedule-time').innerHTML = `${baseTime} <br/><span style="color:#ff5555; font-size:12px; font-weight:700;">OVERDUE NOW!</span>`;
+                }
+            } else {
+                document.getElementById('date').textContent = 'Flexible';
+                document.getElementById('schedule-time').textContent = 'Anytime';
+            }
+        };
+
+        // Hydrate upon initial loading
+        invoke('get_alert_task').then(task => hydrateUI(task)).catch(console.error);
+
+        // Hydrate sequentially if already open
+        listen('set-task', (event) => hydrateUI(event.payload));
+
+        const forceClose = async () => {
+            if (ctx) { ctx.close(); }
+            await invoke('close_alert');
+        };
+
+        document.addEventListener('keydown', forceClose);
+        document.addEventListener('mousedown', forceClose);
+    </script>
+</body>
+
+</html>
