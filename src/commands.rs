@@ -61,6 +61,31 @@ pub fn delete_task(id: i64) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn edit_task(id: i64, payload: TaskPayload) -> Result<(), String> {
+    let db = get_db();
+    let conn = db.get_connection().map_err(|e| e.to_string())?;
+    let due_date = payload
+        .due_date
+        .as_deref()
+        .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+        .map(|d| d.with_timezone(&Utc));
+
+    conn.execute(
+        "UPDATE tasks SET title = ?1, description = ?2, priority = ?3, duration_minutes = ?4, due_date = ?5, is_notified = 0, updated_at = ?6 WHERE id = ?7",
+        rusqlite::params![
+            payload.title,
+            payload.description,
+            payload.priority,
+            payload.duration_minutes,
+            due_date,
+            Utc::now(),
+            id
+        ]
+    ).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn close_alert(app: tauri::AppHandle) {
     use tauri::Manager;
     if let Some(window) = app.get_webview_window("alert") {

@@ -2,6 +2,7 @@ const { invoke } = window.__TAURI__.core;
 
 let allTasks = [];
 let selectedPriority = 'medium';
+let editingTaskId = null;
 
 // ─── Bootstrap ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -76,6 +77,7 @@ function makeTaskCard(task, showDone = false) {
         </div>
       </div>
       <div class="task-actions">
+        <button class="icon-btn" onclick="openEditModal(${task.id})" title="Edit">✎</button>
         <button class="icon-btn" onclick="deleteTask(${task.id})" title="Delete">🗑</button>
       </div>
     </div>`;
@@ -145,8 +147,41 @@ async function deleteTask(id) {
 
 // ─── Modal ──────────────────────────────────────────────────────
 function openAddModal() {
+    editingTaskId = null;
+    document.getElementById('modal-title-text').textContent = 'New Task';
+    document.getElementById('modal-submit-btn').textContent = 'Create Task';
     document.getElementById('modal-overlay').classList.add('open');
     document.getElementById('f-title').focus();
+}
+
+function openEditModal(id) {
+    const task = allTasks.find(t => t.id === id);
+    if (!task) return;
+    editingTaskId = id;
+
+    document.getElementById('modal-title-text').textContent = 'Edit Task';
+    document.getElementById('modal-submit-btn').textContent = 'Save Changes';
+
+    document.getElementById('f-title').value = task.title;
+    document.getElementById('f-desc').value = task.description || '';
+    document.getElementById('f-duration').value = task.duration_minutes || '';
+
+    if (task.due_date) {
+        const dObj = new Date(task.due_date);
+        const pad = n => String(n).padStart(2, '0');
+        document.getElementById('f-due-date').value = `${dObj.getFullYear()}-${pad(dObj.getMonth() + 1)}-${pad(dObj.getDate())}`;
+        document.getElementById('f-due-time').value = `${pad(dObj.getHours())}:${pad(dObj.getMinutes())}`;
+    } else {
+        document.getElementById('f-due-date').value = '';
+        document.getElementById('f-due-time').value = '';
+    }
+
+    document.querySelectorAll('#priority-chips .chip').forEach(c => c.classList.remove('selected'));
+    const pBtn = document.querySelector(`#priority-chips [data-value="${task.priority}"]`);
+    if (pBtn) pBtn.classList.add('selected');
+    selectedPriority = task.priority;
+
+    document.getElementById('modal-overlay').classList.add('open');
 }
 
 function closeAddModal() {
@@ -217,19 +252,24 @@ async function handleSubmit(event) {
     }
 
     try {
-        await invoke('create_task', {
-            payload: {
-                title,
-                description: desc,
-                priority: selectedPriority,
-                duration_minutes,
-                due_date,
-            }
-        });
+        const payload = {
+            title,
+            description: desc,
+            priority: selectedPriority,
+            duration_minutes,
+            due_date,
+        };
+
+        if (editingTaskId) {
+            await invoke('edit_task', { id: editingTaskId, payload });
+        } else {
+            await invoke('create_task', { payload });
+        }
+
         closeAddModal();
         await loadTasks();
     } catch (e) {
-        console.error('Failed to create task:', e);
+        console.error('Failed to save task:', e);
         alert('Error: ' + e);
     }
 }

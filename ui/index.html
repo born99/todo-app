@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <div class="app-shell">
     <!-- Sidebar -->
@@ -107,11 +109,11 @@
     </main>
   </div>
 
-  <!-- ADD TASK MODAL -->
+  <!-- ADD/EDIT TASK MODAL -->
   <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
     <div class="modal" id="modal">
       <div class="modal-header">
-        <h2 class="modal-title">New Task</h2>
+        <h2 class="modal-title" id="modal-title-text">New Task</h2>
         <button class="modal-close" onclick="closeAddModal()">✕</button>
       </div>
       <form class="modal-form" onsubmit="handleSubmit(event)">
@@ -127,9 +129,12 @@
           <div class="form-group">
             <label>Priority</label>
             <div class="chip-group" id="priority-chips">
-              <button type="button" class="chip chip-green" data-value="low" onclick="selectPriority(this)">🟢 Low</button>
-              <button type="button" class="chip chip-yellow selected" data-value="medium" onclick="selectPriority(this)">🟡 Medium</button>
-              <button type="button" class="chip chip-red" data-value="high" onclick="selectPriority(this)">🔴 High</button>
+              <button type="button" class="chip chip-green" data-value="low" onclick="selectPriority(this)">🟢
+                Low</button>
+              <button type="button" class="chip chip-yellow selected" data-value="medium"
+                onclick="selectPriority(this)">🟡 Medium</button>
+              <button type="button" class="chip chip-red" data-value="high" onclick="selectPriority(this)">🔴
+                High</button>
             </div>
           </div>
           <div class="form-group">
@@ -152,7 +157,7 @@
         </div>
         <div class="modal-actions">
           <button type="button" class="btn-secondary" onclick="closeAddModal()">Cancel</button>
-          <button type="submit" class="btn-primary">Create Task</button>
+          <button type="submit" class="btn-primary" id="modal-submit-btn">Create Task</button>
         </div>
       </form>
     </div>
@@ -160,4 +165,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>

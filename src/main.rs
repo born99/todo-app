@@ -76,6 +76,7 @@ fn main() {
             commands::create_task,
             commands::complete_task,
             commands::delete_task,
+            commands::edit_task,
             commands::close_alert,
         ])
         .run(tauri::generate_context!())
