@@ -17,13 +17,11 @@ fn main() {
         println!("Database schema initialized successfully.");
     }
 
-    // Start background notification daemon
-    background::start_notification_daemon("tasks.db".to_string());
-
     println!("Running in background. Starting Tauri window...");
 
     tauri::Builder::default()
         .setup(|app| {
+            background::start_notification_daemon("tasks.db".to_string(), app.handle().clone());
             use tauri::Manager;
             use tauri::menu::{Menu, MenuItem};
             use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};

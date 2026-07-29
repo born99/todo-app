@@ -1,4 +1,5 @@
 const { invoke } = window.__TAURI__.core;
+const { listen } = window.__TAURI__.event;
 
 let allTasks = [];
 let selectedPriority = 'medium';
@@ -6,7 +7,41 @@ let selectedPriority = 'medium';
 // ─── Bootstrap ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     loadTasks();
+    
+    // Listen for aggressive overdue alarms from Rust Backend
+    listen('task-overdue', (event) => {
+        const task = event.payload;
+        if (!document.body.classList.contains('shake-screen')) {
+            playAggressiveAlarm();
+            document.body.classList.add('shake-screen');
+            
+            // Open huge alert modal (freezes JS thread until user clicks OK)
+            alert(`🚨 TASK OVERDUE 🚨\n\n${task.title.toUpperCase()}\n${task.description || ''}`);
+            
+            setTimeout(() => document.body.classList.remove('shake-screen'), 3500);
+        }
+    });
 });
+
+function playAggressiveAlarm() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.type = 'square';
+    // Rapidly alternate frequency for intense alarm effect
+    let freq = 800;
+    for (let i = 0; i < 15; i++) {
+        freq = freq === 800 ? 1100 : 800;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + (i * 0.2));
+    }
+    
+    gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    osc.start();
+    setTimeout(() => { osc.stop(); ctx.close(); }, 3000);
+}
 
 // ─── Tab Switching ──────────────────────────────────────────────
 function switchTab(tabName, btn) {

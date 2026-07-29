@@ -1,26 +1,24 @@
 use crate::database::Database;
-use notify_rust::Notification;
 use std::thread;
 use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager};
 
-pub fn start_notification_daemon(db_path: String) {
+pub fn start_notification_daemon(db_path: String, app: AppHandle) {
     thread::spawn(move || {
         let db = Database::new(&db_path);
         loop {
             if let Ok(overdue_tasks) = db.fetch_unnotified_overdue_tasks() {
                 for task in overdue_tasks {
-                    let body = task
-                        .description
-                        .clone()
-                        .unwrap_or_else(|| "Task Reminder".to_string());
-                    if let Err(e) = Notification::new()
-                        .summary(&format!("Overdue: {}", task.title))
-                        .body(&body)
-                        .appname("Rust Productivity App")
-                        .timeout(notify_rust::Timeout::Milliseconds(5000))
-                        .show()
-                    {
-                        eprintln!("Failed to show notification: {}", e);
+                    // Force GUI window to pop up front and center
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.unminimize();
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+
+                    // Blast payload directly to frontend Javascript via Tauri IPC
+                    if let Err(e) = app.emit("task-overdue", &task) {
+                        eprintln!("Failed to emit event: {}", e);
                     } else {
                         let _ = db.mark_task_notified(task.id);
                     }
