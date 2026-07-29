@@ -197,9 +197,11 @@
         updateTime();
         setInterval(updateTime, 1000);
 
+        let countdownInterval = null;
         // Function to hydrate UI explicitly
         const hydrateUI = (task) => {
             if (!task) return;
+            if (countdownInterval) clearInterval(countdownInterval);
             document.getElementById('title').textContent = task.title;
             document.getElementById('desc').textContent = task.description || 'No description provided.';
             document.getElementById('priority').textContent = task.priority;
@@ -208,7 +210,28 @@
             if (task.due_date) {
                 const dObj = new Date(task.due_date);
                 document.getElementById('date').textContent = dObj.toLocaleDateString();
-                document.getElementById('schedule-time').textContent = dObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                const baseTime = dObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const updateCountdown = () => {
+                    const now = new Date().getTime();
+                    const due = dObj.getTime();
+                    if (now < due) {
+                        const diff = Math.floor((due - now) / 1000);
+                        const mins = String(Math.floor(diff / 60)).padStart(2, '0');
+                        const secs = String(diff % 60).padStart(2, '0');
+                        document.getElementById('schedule-time').innerHTML = `${baseTime} <br/><span style="color:#ffeb3b; font-size:12px; font-weight:700;">Starts in ${mins}:${secs}</span>`;
+                    } else {
+                        document.getElementById('schedule-time').innerHTML = `${baseTime} <br/><span style="color:#ff5555; font-size:12px; font-weight:700;">OVERDUE NOW!</span>`;
+                        if (countdownInterval) clearInterval(countdownInterval);
+                    }
+                };
+
+                if (new Date().getTime() < dObj.getTime()) {
+                    updateCountdown();
+                    countdownInterval = setInterval(updateCountdown, 1000);
+                } else {
+                    document.getElementById('schedule-time').innerHTML = `${baseTime} <br/><span style="color:#ff5555; font-size:12px; font-weight:700;">OVERDUE NOW!</span>`;
+                }
             } else {
                 document.getElementById('date').textContent = 'Flexible';
                 document.getElementById('schedule-time').textContent = 'Anytime';

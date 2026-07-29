@@ -142,17 +142,25 @@
             <input id="f-duration" class="form-input" type="number" placeholder="e.g. 30" />
           </div>
         </div>
-        <div class="form-group">
-          <label>Due Date</label>
-          <div class="chip-group">
-            <button type="button" class="chip" onclick="setDueDate('today')">Today 6pm</button>
-            <button type="button" class="chip" onclick="setDueDate('tomorrow')">Tomorrow</button>
-            <button type="button" class="chip" onclick="setDueDate('week')">Next Week</button>
-            <button type="button" class="chip chip-ghost" onclick="setDueDate(null)">Clear</button>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Due Date & Time</label>
+            <div class="chip-group">
+              <button type="button" class="chip" onclick="setDueDate('today')">Today 6pm</button>
+              <button type="button" class="chip" onclick="setDueDate('tomorrow')">Tomorrow</button>
+              <button type="button" class="chip chip-ghost" onclick="setDueDate(null)">Clear</button>
+            </div>
+            <input id="f-due-datetime" class="form-input" type="datetime-local" style="margin-top:8px" />
           </div>
-          <div class="form-row mt-8">
-            <input id="f-due-date" class="form-input" type="date" />
-            <input id="f-due-time" class="form-input" type="time" />
+          <div class="form-group">
+            <label>Alert Early</label>
+            <select id="f-alert-early" class="form-input" style="margin-top:40px">
+              <option value="0">Exactly on time</option>
+              <option value="5">5 minutes early</option>
+              <option value="15">15 minutes early</option>
+              <option value="30">30 minutes early</option>
+              <option value="60">1 hour early</option>
+            </select>
           </div>
         </div>
         <div class="modal-actions">

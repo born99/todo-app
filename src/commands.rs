@@ -2,16 +2,12 @@ use crate::database::Database;
 use crate::models::{Priority, Task};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 pub static ALERT_TASK: OnceLock<Mutex<Option<Task>>> = OnceLock::new();
 
 pub fn get_alert_task_state() -> &'static Mutex<Option<Task>> {
     ALERT_TASK.get_or_init(|| Mutex::new(None))
-}
-
-fn get_db() -> Database {
-    Database::new("tasks.db")
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -21,16 +17,19 @@ pub struct TaskPayload {
     pub priority: String,
     pub duration_minutes: Option<i32>,
     pub due_date: Option<String>,
+    pub alert_early_minutes: Option<i32>,
 }
 
 #[tauri::command]
-pub fn get_tasks() -> Result<Vec<Task>, String> {
-    get_db().fetch_tasks().map_err(|e| e.to_string())
+pub fn get_tasks(db: tauri::State<'_, Arc<Database>>) -> Result<Vec<Task>, String> {
+    db.fetch_tasks()
 }
 
 #[tauri::command]
-pub fn create_task(payload: TaskPayload) -> Result<(), String> {
-    let db = get_db();
+pub fn create_task(
+    payload: TaskPayload,
+    db: tauri::State<'_, Arc<Database>>,
+) -> Result<(), String> {
     let due_date = payload
         .due_date
         .as_deref()
@@ -49,58 +48,49 @@ pub fn create_task(payload: TaskPayload) -> Result<(), String> {
         recurring_rule: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        alert_early_minutes: payload.alert_early_minutes.or(Some(0)),
     };
-    db.insert_task(&task).map(|_| ()).map_err(|e| e.to_string())
+    db.insert_task(&task).map(|_| ())
 }
 
 #[tauri::command]
-pub fn complete_task(id: i64) -> Result<(), String> {
-    get_db().mark_task_completed(id).map_err(|e| e.to_string())
+pub fn complete_task(id: i64, db: tauri::State<'_, Arc<Database>>) -> Result<(), String> {
+    db.mark_task_completed(id)
 }
 
 #[tauri::command]
-pub fn delete_task(id: i64) -> Result<(), String> {
-    let db = get_db();
-    let conn = db.get_connection().map_err(|e| e.to_string())?;
-    conn.execute("DELETE FROM tasks WHERE id = ?1", rusqlite::params![id])
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+pub fn delete_task(id: i64, db: tauri::State<'_, Arc<Database>>) -> Result<(), String> {
+    db.delete_task_by_id(id)
 }
 
 #[tauri::command]
-pub fn edit_task(id: i64, payload: TaskPayload) -> Result<(), String> {
-    let db = get_db();
-    let conn = db.get_connection().map_err(|e| e.to_string())?;
+pub fn edit_task(
+    id: i64,
+    payload: TaskPayload,
+    db: tauri::State<'_, Arc<Database>>,
+) -> Result<(), String> {
     let due_date = payload
         .due_date
         .as_deref()
         .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
         .map(|d| d.with_timezone(&Utc));
 
-    conn.execute(
-        "UPDATE tasks SET title = ?1, description = ?2, priority = ?3, duration_minutes = ?4, due_date = ?5, is_notified = 0, updated_at = ?6 WHERE id = ?7",
-        rusqlite::params![
-            payload.title,
-            payload.description,
-            payload.priority,
-            payload.duration_minutes,
-            due_date,
-            Utc::now(),
-            id
-        ]
-    ).map_err(|e| e.to_string())?;
-    Ok(())
+    db.update_task_by_id(id, &payload, due_date)
 }
 
 #[tauri::command]
-pub fn close_alert(app: tauri::AppHandle) {
+pub fn close_alert(app: tauri::AppHandle) -> Result<(), String> {
     use tauri::Manager;
     if let Some(window) = app.get_webview_window("alert") {
         let _ = window.close();
     }
+    Ok(())
 }
 
 #[tauri::command]
-pub fn get_alert_task() -> Option<Task> {
-    get_alert_task_state().lock().unwrap().clone()
+pub fn get_alert_task() -> Result<Option<Task>, String> {
+    let lock = get_alert_task_state()
+        .lock()
+        .map_err(|_| "Poison Error".to_string())?;
+    Ok(lock.clone())
 }

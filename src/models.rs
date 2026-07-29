@@ -44,6 +44,7 @@ pub struct Task {
     pub recurring_rule: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub alert_early_minutes: Option<i32>,
 }
 
 #[allow(dead_code)]

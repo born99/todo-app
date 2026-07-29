@@ -20,3 +20,6 @@
   - [x] Automated portable standalone `.exe` binaries safely across GitHub Actions
 - [x] **Post-Mortem Documentation**
   - [x] Authored structural `ARCHITECTURE.md` for codebase decoupling tracking
+- [x] **Enterprise Architecture Refactoring**
+  - [x] Replaced individual SQLite instantiations with `Arc<Mutex>` Singleton pools.
+  - [x] Injected Database handlers explicitly through Tauri native `.manage(State)` engine APIs.

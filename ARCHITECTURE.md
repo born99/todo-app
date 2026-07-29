@@ -115,3 +115,21 @@ When `background.rs` decides an alarm must sound, it configures:
 - `decorations(false) & transparent(true)`: Renders an invisible HTML border masking smoothly onto the user's desktop hardware visually.
 - `always_on_top(true)`: Forces maximum Z-index priority (overlapping intense games and workflows).
 - **Recycling Protocol:** Before calling `Builder`, Tauri checks `if let Some(existing) = app.get_webview_window("alert")`. If a user triggers a second alarm while the first is visibly open, Tauri prevents a window-label compilation panic, and purely interpolates the second payload natively into the existing live pane immediately.
+
+## 7. Enterprise Refactoring: Connection Pooling & Dependency Injection
+
+### The Historical Context
+**Original Implementation:** Initially, every time a UI method executed an IPC command (e.g., `get_tasks`), the backend manually invoked `Database::new("tasks.db")`.
+- **Pros:** Incredibly simple prototyping workflow. Inherently bypasses the extremely steep Rust thread and lifetime boundary learning curves. Prevents context sharing.
+- **Cons:** Under industrial data-limits, spawning a physical Disk File Stream on every UI click generates a massive I/O bottleneck. It heavily risks triggering the destructive SQLite `database is locked` error and permanently exhausts arbitrary OS-level file handles.
+
+### The Enterprise Transition
+**The Refactored Implementation:** We migrated the native layer to a **Thread-Safe Singleton Connection**. `main.rs` structurally initializes exactly *one* connection at application boot. It natively wraps the database into a secure `Arc<Mutex<Database>>`. This single memory footprint is seamlessly cloned synchronously into the Background Daemon sequence, and dynamically bound into Tauri's native IPC State engine natively utilizing `.manage(db)`. 
+- **Pros:** Obliterates all Disk I/O latencies. SQLite executes on pure RAM cache speed without ever having to reload the internal buffer pool frame! Absolute cross-thread lock safety mapping flawless transactions implicitly.
+- **Cons:** Considerably steepens the application's architectural complexity. Requires strict pattern-matching `Result` propagation networks to mathematically prevent `Mutex` logic poisoning from cascading into fatal core engine panics.
+
+#### Research Keywords & Further Study
+To thoroughly comprehend how we achieved this massive performance optimization without breaking the UI flow, please Google/research the following structural Rust patterns:
+- **Tauri State Management (`tauri::State`)**: Forms the Dependency Injection (DI) container algorithm explicitly mapping variables natively into frontend hook parameters.
+- **Atomic Reference Counting (`Arc<T>`)**: Rust's standard primitive allowing heavily isolated background threads to simultaneously point linearly to identical heap block data securely bridging lifespans.
+- **Thread Poisoning & `OnceLock<Mutex>`**: Defining precisely why arbitrarily mapping `.unwrap()` algorithms across asynchronous boundaries inevitably forces core stack corruptions.

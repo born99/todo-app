@@ -169,12 +169,11 @@ function openEditModal(id) {
     if (task.due_date) {
         const dObj = new Date(task.due_date);
         const pad = n => String(n).padStart(2, '0');
-        document.getElementById('f-due-date').value = `${dObj.getFullYear()}-${pad(dObj.getMonth() + 1)}-${pad(dObj.getDate())}`;
-        document.getElementById('f-due-time').value = `${pad(dObj.getHours())}:${pad(dObj.getMinutes())}`;
+        document.getElementById('f-due-datetime').value = `${dObj.getFullYear()}-${pad(dObj.getMonth() + 1)}-${pad(dObj.getDate())}T${pad(dObj.getHours())}:${pad(dObj.getMinutes())}`;
     } else {
-        document.getElementById('f-due-date').value = '';
-        document.getElementById('f-due-time').value = '';
+        document.getElementById('f-due-datetime').value = '';
     }
+    document.getElementById('f-alert-early').value = task.alert_early_minutes || '0';
 
     document.querySelectorAll('#priority-chips .chip').forEach(c => c.classList.remove('selected'));
     const pBtn = document.querySelector(`#priority-chips [data-value="${task.priority}"]`);
@@ -189,8 +188,8 @@ function closeAddModal() {
     document.getElementById('f-title').value = '';
     document.getElementById('f-desc').value = '';
     document.getElementById('f-duration').value = '';
-    document.getElementById('f-due-date').value = '';
-    document.getElementById('f-due-time').value = '';
+    document.getElementById('f-due-datetime').value = '';
+    document.getElementById('f-alert-early').value = '0';
     selectedPriority = 'medium';
     document.querySelectorAll('#priority-chips .chip').forEach(c => c.classList.remove('selected'));
     document.querySelector('#priority-chips [data-value="medium"]').classList.add('selected');
@@ -207,31 +206,21 @@ function selectPriority(btn) {
 }
 
 function setDueDate(option) {
-    const dInput = document.getElementById('f-due-date');
-    const tInput = document.getElementById('f-due-time');
+    const dtInput = document.getElementById('f-due-datetime');
     if (!option) {
-        dInput.value = '';
-        tInput.value = '';
+        dtInput.value = '';
         return;
     }
 
     const now = new Date();
-    if (option === 'today') {
-        // Leave date as today
-    } else if (option === 'tomorrow') {
-        now.setDate(now.getDate() + 1);
-    } else if (option === 'week') {
-        now.setDate(now.getDate() + 7);
-    }
+    if (option === 'tomorrow') now.setDate(now.getDate() + 1);
+    if (option === 'week') now.setDate(now.getDate() + 7);
+
+    if (option === 'today') now.setHours((now.getHours() + 1) % 24, 0, 0, 0);
+    else now.setHours(18, 0, 0, 0);
 
     const pad = n => String(n).padStart(2, '0');
-    dInput.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-
-    if (option === 'today') {
-        tInput.value = `${pad((now.getHours() + 1) % 24)}:00`;
-    } else {
-        tInput.value = '18:00';
-    }
+    dtInput.value = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 }
 
 async function handleSubmit(event) {
@@ -243,13 +232,12 @@ async function handleSubmit(event) {
     const durVal = document.getElementById('f-duration').value.trim();
     const duration_minutes = durVal ? parseInt(durVal) : null;
 
-    const dVal = document.getElementById('f-due-date').value;
-    const tVal = document.getElementById('f-due-time').value;
+    const dtVal = document.getElementById('f-due-datetime').value;
     let due_date = null;
-    if (dVal) {
-        const timeStr = tVal || "00:00";
-        due_date = new Date(`${dVal}T${timeStr}`).toISOString();
+    if (dtVal) {
+        due_date = new Date(dtVal).toISOString();
     }
+    const alert_early_minutes = parseInt(document.getElementById('f-alert-early').value) || 0;
 
     try {
         const payload = {
@@ -258,6 +246,7 @@ async function handleSubmit(event) {
             priority: selectedPriority,
             duration_minutes,
             due_date,
+            alert_early_minutes,
         };
 
         if (editingTaskId) {

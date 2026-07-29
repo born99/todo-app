@@ -6,11 +6,12 @@ mod database;
 mod models;
 mod tray;
 
+use std::sync::Arc;
+
 fn main() {
     println!("Personal Productivity App - Core Initialized");
 
-    // Verify DB layout
-    let db = database::Database::new("tasks.db");
+    let db = Arc::new(database::Database::new("tasks.db"));
     if let Err(e) = db.initialize_schema() {
         eprintln!("Failed to initialize database: {}", e);
     } else {
@@ -18,10 +19,12 @@ fn main() {
     }
 
     println!("Running in background. Starting Tauri window...");
+    let db_setup = Arc::clone(&db);
 
     tauri::Builder::default()
-        .setup(|app| {
-            background::start_notification_daemon("tasks.db".to_string(), app.handle().clone());
+        .manage(db) // Inject state
+        .setup(move |app| {
+            background::start_notification_daemon(db_setup, app.handle().clone());
             use tauri::Manager;
             use tauri::menu::{Menu, MenuItem};
             use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -30,16 +33,14 @@ fn main() {
             let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
 
-            let tray = TrayIconBuilder::new()
+            let _tray = TrayIconBuilder::new()
                 .menu(&menu)
                 .tooltip("Rust Productivity App")
                 .icon(app.default_window_icon().unwrap().clone())
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "quit" => {
-                        std::process::exit(0);
-                    }
+                .on_menu_event(|_app, event| match event.id.as_ref() {
+                    "quit" => std::process::exit(0),
                     "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
+                        if let Some(window) = _app.get_webview_window("main") {
                             window.show().unwrap();
                             window.set_focus().unwrap();
                         }
