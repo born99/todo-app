@@ -22,8 +22,15 @@ fn main() {
     let db_setup = Arc::clone(&db);
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![]),
+        ))
         .manage(db) // Inject state
         .setup(move |app| {
+            use tauri_plugin_autostart::ManagerExt;
+            let _ = app.autolaunch().enable();
+
             background::start_notification_daemon(db_setup, app.handle().clone());
             use tauri::Manager;
             use tauri::menu::{Menu, MenuItem};
