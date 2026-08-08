@@ -11,7 +11,12 @@ use std::sync::Arc;
 fn main() {
     println!("Personal Productivity App - Core Initialized");
 
-    let db = Arc::new(database::Database::new("tasks.db"));
+    let mut db_path = dirs::data_local_dir().unwrap_or_else(|| std::path::PathBuf::from("."));
+    db_path.push("productivity-app");
+    std::fs::create_dir_all(&db_path).unwrap_or_default();
+    db_path.push("tasks.db");
+
+    let db = Arc::new(database::Database::new(db_path.to_str().unwrap()));
     if let Err(e) = db.initialize_schema() {
         eprintln!("Failed to initialize database: {}", e);
     } else {

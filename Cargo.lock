@@ -2840,6 +2840,7 @@ name = "rust-productivity-app"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "dirs 6.0.0",
  "notify-rust",
  "rusqlite",
  "serde",
