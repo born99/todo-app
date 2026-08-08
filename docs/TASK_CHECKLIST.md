@@ -23,3 +23,6 @@
 - [x] **Enterprise Architecture Refactoring**
   - [x] Replaced individual SQLite instantiations with `Arc<Mutex>` Singleton pools.
   - [x] Injected Database handlers explicitly through Tauri native `.manage(State)` engine APIs.
+- [x] **System Integration**
+  - [x] Integrate `tauri-plugin-autostart` dependency
+  - [x] Configure `src/main.rs` to forcefully inject OS registry auto-start payloads on boot
